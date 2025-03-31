@@ -21,7 +21,7 @@ import aiofiles
 from typing import List
 from git_api import GA1_13, GA2_3, GA2_7, GA4_8, GA2_9_file, GA2_6_file
 
-app = FastAPI()  # Define the app instance here
+app = FastAPI()  # Ensure this is defined early
 
 # CORS Configuration (Vercel allows any origin by default)
 app.add_middleware(
@@ -112,7 +112,9 @@ def Solve_Unknown_Task(question):
         "model": "gpt-4o-mini",
         "messages": [{"role": "user", "content": question+" return only the answer"}]
     }
-    API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjIxZjMwMDAwMzFAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.-c4ok0TU1wsXREvtXfZ6xgzVNTDZEUJJoA2mJUXQ4VU"
+    API_KEY = os.getenv("API_KEY")  # Read the API key from environment variable
+    if not API_KEY:
+        raise ValueError("API_KEY environment variable not set")
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {API_KEY}"
