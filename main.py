@@ -4,7 +4,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-
 from fastapi import FastAPI, Form, File, UploadFile  # type: ignore
 from fastapi.responses import HTMLResponse  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
@@ -22,19 +21,7 @@ import aiofiles
 from typing import List
 from git_api import GA1_13, GA2_3, GA2_7, GA4_8, GA2_9_file, GA2_6_file
 
-# Example of adding logging
-@app.post("/api/")
-async def receive_question(question: str = Form(...), file: UploadFile = File(None)):
-    logger.debug(f"Received question: {question}")
-    task_id = classify_task(question)
-    logger.debug(f"Classified task ID: {task_id}")
-    
-    # Add similar log statements at key points in your code
-
-    # Your existing code...
-
-
-app = FastAPI()
+app = FastAPI()  # Define the app instance here
 
 # CORS Configuration (Vercel allows any origin by default)
 app.add_middleware(
@@ -46,7 +33,6 @@ app.add_middleware(
 )
 
 EXCEL_FILE = os.path.join(os.path.dirname(__file__), "tasks.xlsx")
-
 
 def load_tasks_from_excel():
     if not os.path.exists(EXCEL_FILE):
@@ -61,9 +47,7 @@ def load_tasks_from_excel():
     workbook.close()
     return (tasks, tasks_answers)
 
-
 TASKS, TASKS_ANSWERS = load_tasks_from_excel()
-
 
 def classify_task(question: str) -> str:
     """Classify a question based on keyword matching with TASKS."""
@@ -72,7 +56,6 @@ def classify_task(question: str) -> str:
         if keyword.lower() in question_lower:
             return task_id  # Return the first matching task ID
     return "Unknown"  # Default if no match is found
-
 
 def save_file(file: UploadFile):
     os.makedirs("uploads", exist_ok=True)
@@ -90,14 +73,12 @@ def save_file(file: UploadFile):
         return f"Error saving file: {str(e)}"
     return file_path
 
-
 def get_file_path(question: str) -> str:
     """Extracts a single filename from the question and returns its full path in the /uploads directory."""
     match = re.search(r'([^\/\\\s]+?\.[a-zA-Z0-9]+)', question)
     file = match.group(1) if match else None
     file_path = os.path.join(os.getcwd(), "uploads", file) if file else None
     return file_path if file_path and os.path.exists(file_path) else None
-
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_form():
@@ -108,12 +89,10 @@ async def serve_form():
     except FileNotFoundError:
         return HTMLResponse(content="<h1>index.html not found</h1>", status_code=404)
 
-
 async def read_answer(task_id: str, question: str):
     print("reading from json")
     answer = TASKS_ANSWERS.get(task_id, "No answer found for this task.")
     return answer
-
 
 def to_string(value):
     """Converts any type of value to a string representation."""
@@ -126,7 +105,6 @@ def to_string(value):
         except (TypeError, ValueError):
             return str(value)  # Fallback for other types
     return value
-
 
 def Solve_Unknown_Task(question):
     BASE_URL = "https://aiproxy.sanand.workers.dev/openai/v1"
@@ -144,18 +122,14 @@ def Solve_Unknown_Task(question):
 
     return response.json().get("choices", [])[0].get("message", {}).get("content")
 
-
 @app.post("/api/")
 async def receive_question(question: str = Form(...), file: UploadFile = File(None)):
-    # async def receive_question(question: str = Form(...), files: List[UploadFile] = File(None)):     # file = files[0]
-
-    # if 'where is ' in question.lower():
-    #     file_path = get_file_path(question)
-    #     return {"question": question, "answer": file_path if file_path else "File not found"}
-
+    logger.debug(f"Received question: {question}")
     task_id = classify_task(question)
+    logger.debug(f"Classified task ID: {task_id}")
+
     if task_id == "Unknown":
-        print(question)
+        logger.debug(f"Solving unknown task: {question}")
         answer = Solve_Unknown_Task(question)
     elif task_id in ['GA1.1']:
         answer = await read_answer(task_id=task_id, question=question)
@@ -163,7 +137,7 @@ async def receive_question(question: str = Form(...), file: UploadFile = File(No
         answer = await fetch_answer(task_id=task_id, question=question, file_path="")
     elif task_id in ['GA1.3']:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             if not os.getenv('VERCEL'):
                 answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
             else:
@@ -171,72 +145,60 @@ async def receive_question(question: str = Form(...), file: UploadFile = File(No
         else:
             answer = await read_answer(task_id=task_id, question=question)
     elif task_id in ['GA1.16']:
-        # print(os.getenv('VERCEL'))
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         else:
             answer = await read_answer(task_id=task_id, question=question)
     elif task_id in ['GA1.8', 'GA1.10', 'GA1.12', 'GA1.14', 'GA1.15', 'GA1.17']:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         else:
             answer = await read_answer(task_id=task_id, question=question)
     elif task_id in ['GA1.6', 'GA1.11']:
         func_answer = ""
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             func_answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         answer = func_answer or await read_answer(task_id=task_id, question=question)
     elif task_id in ['GA1.13']:
         answer = GA1_13(question)
-        # answer = "https://raw.githubusercontent.com/Telvinvarghese/Test/main/email.json"
     elif task_id in ['GA2.1']:
         answer = await read_answer(task_id=task_id, question=question)
     elif task_id in ['GA2.3']:
         answer = GA2_3(question)
-        # answer = "https://telvinvarghese.github.io/website/"
     elif task_id in ['GA2.2', 'GA2.4']:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         else:
             answer = await read_answer(task_id=task_id, question=question)
     elif task_id in ['GA2.5']:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         else:
             answer = await fetch_answer(task_id=task_id, question=question, file_path="")
     elif task_id in ['GA2.6']:
-        print(file)
-        # file_content = await file.read()
+        logger.debug(f"Received file: {file.filename}")
         flag = await GA2_6_file(file)
-        if flag == "True":
-            answer = "https://api-git-main-telvinvargheses-projects.vercel.app/api"
-        else:
-            answer = "https://api-git-main-telvinvargheses-projects.vercel.app/api"
+        answer = "https://api-git-main-telvinvargheses-projects.vercel.app/api" if flag == "True" else "https://api-git-main-telvinvargheses-projects.vercel.app/api"
     elif task_id in ['GA2.7']:
         answer = GA2_7(question)
-        # answer = "https://github.com/Telvinvarghese/Test"
     elif task_id in ['GA2.8']:
         answer = "https://hub.docker.com/repository/docker/telvinvarghese/py-hello/general"
     elif task_id in ['GA2.9']:
-        print(file)
-        # file_content = await file.read() 
+        logger.debug(f"Received file: {file.filename}")
         flag = await GA2_9_file(file)
-        if flag == "True":
-            answer = "https://tds-ga2-9.vercel.app/api"
-        else:
-            answer = "https://tds-ga2-9.vercel.app/api"
+        answer = "https://tds-ga2-9.vercel.app/api" if flag == "True" else "https://tds-ga2-9.vercel.app/api"
     elif task_id in ['GA2.10']:
         answer = "https://b45f-223-178-84-140.ngrok-free.app/"
     elif task_id in ["GA3.1", "GA3.2", "GA3.3", "GA3.5", "GA3.6"]:
         answer = await fetch_answer(task_id=task_id, question=question, file_path="")
     elif task_id in ["GA3.4"]:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         else:
             answer = await read_answer(task_id=task_id, question=question)
@@ -252,10 +214,9 @@ async def receive_question(question: str = Form(...), file: UploadFile = File(No
         answer = "https://tds-ga4-3.vercel.app/api/outline"
     elif task_id in ['GA4.8']:
         answer = GA4_8(question)
-        # answer = "https://github.com/Telvinvarghese/Test"
     elif task_id in ['GA4.9']:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         else:
             answer = await fetch_answer(task_id=task_id, question=question, file_path="")
@@ -263,13 +224,13 @@ async def receive_question(question: str = Form(...), file: UploadFile = File(No
         answer = await read_answer(task_id=task_id, question=question)
     elif task_id in ['GA5.1', 'GA5.2', 'GA5.5', 'GA5.6', 'GA5.7']:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         else:
             answer = await read_answer(task_id=task_id, question=question)
     elif task_id in ['GA5.3', 'GA5.4']:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
         else:
             answer = await fetch_answer(task_id=task_id, question=question, file_path="")
@@ -279,36 +240,26 @@ async def receive_question(question: str = Form(...), file: UploadFile = File(No
         answer = await fetch_answer(task_id=task_id, question=question, file_path="")
     elif task_id in ['GA5.10']:
         if file:
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             answer = await fetch_answer(task_id=task_id, question=question, file_path=file)
-            # image_url = f"data:image/png;base64,{answer}"
-            # print(image_url)
-            # img_data = base64.b64decode(answer)
-            # img = Image.open(BytesIO(img_data))
-            # img.show()
-            # with open("reconstructed_image.png", "wb") as f:
-            #     f.write(img_data)
     else:
         if file:
-            # file_path = save_file(file)
-            print(file)
+            logger.debug(f"Received file: {file.filename}")
             file_path = file
         answer = await read_answer(task_id=task_id, question=question)
         response = {"answer": answer}
-        print(response)
+        logger.debug(f"Response: {response}")
         return response
 
     actual_answer = answer
     answer = to_string(answer)
     output = {"question": question, "task": task_id, "answer": answer,
-              "file received": file.filename if file else "No file uploaded", }
-    print("output :", output)
-    print()
+              "file received": file.filename if file else "No file uploaded"}
+    logger.debug(f"Output: {output}")
     response = {"answer": answer}
-    print("response :", response)
-    print()
+    logger.debug(f"Response: {response}")
     try:
-        print("json output :", json.loads(answer))
+        logger.debug(f"JSON output: {json.loads(answer)}")
     except json.JSONDecodeError:
         pass
     return response
