@@ -20,3 +20,4 @@ __pycache__/
 # Ignore logs and temp files (optional)
 *.log
 *.tmp
+.vercel
