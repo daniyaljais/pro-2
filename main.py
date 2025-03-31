@@ -202,7 +202,7 @@ async def receive_question(question: str = Form(...), file: UploadFile = File(No
         answer = GA2_7(question)
         # answer = "https://github.com/Telvinvarghese/Test"
     elif task_id in ['GA2.8']:
-        answer = "https://hub.docker.com/r/daniyal177/fastapi-llm-app"
+        answer = "https://hub.docker.com/repository/docker/telvinvarghese/py-hello/general"
     elif task_id in ['GA2.9']:
         print(file)
         # file_content = await file.read() 
