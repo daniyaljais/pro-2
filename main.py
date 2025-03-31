@@ -4,16 +4,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Example of adding logging
-@app.post("/api/")
-async def receive_question(question: str = Form(...), file: UploadFile = File(None)):
-    logger.debug(f"Received question: {question}")
-    task_id = classify_task(question)
-    logger.debug(f"Classified task ID: {task_id}")
-    
-    # Add similar log statements at key points in your code
-
-    # Your existing code...
 
 from fastapi import FastAPI, Form, File, UploadFile  # type: ignore
 from fastapi.responses import HTMLResponse  # type: ignore
@@ -31,6 +21,18 @@ import httpx  # type: ignore
 import aiofiles
 from typing import List
 from git_api import GA1_13, GA2_3, GA2_7, GA4_8, GA2_9_file, GA2_6_file
+
+# Example of adding logging
+@app.post("/api/")
+async def receive_question(question: str = Form(...), file: UploadFile = File(None)):
+    logger.debug(f"Received question: {question}")
+    task_id = classify_task(question)
+    logger.debug(f"Classified task ID: {task_id}")
+    
+    # Add similar log statements at key points in your code
+
+    # Your existing code...
+
 
 app = FastAPI()
 
